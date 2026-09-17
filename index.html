@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bundelkhand University, Jhansi - Provisional Statement of Marks</title>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#fff;color:#111;font-family:"Times New Roman",serif}
+.page{max-width:805px;margin:auto;padding:0 22px}
+.header{height:91px;border-bottom:1px solid #999;display:flex;align-items:center;position:relative}
+.seal{position:absolute;left:102px;top:2px;width:88px;height:88px;object-fit:cover;border-radius:50%}
+.heading{margin-left:204px;line-height:1.05;font-family:Arial,sans-serif}
+.university{font-size:28px;color:#8a451d}
+.subtitle{font-size:19px;color:#765544;margin-top:5px}
+.content{padding-top:40px}
+.instruction{font-size:15px;font-weight:bold;margin:0 0 29px 7px}
+.form-row{display:flex;align-items:center;margin-left:18px}
+label{font-size:15px;font-weight:bold}
+.roll-label{width:77px}.course-label{width:98px;margin-left:54px}
+input,select{height:22px;border:1px solid #888;border-radius:2px;background:white;font-family:"Times New Roman";font-size:14px}
+#roll{width:158px;padding:2px 5px}#course{width:350px}
+.button-row{margin:17px 0 0 407px}
+button{font:12px Arial;padding:2px 9px;height:22px;border:1px solid #888;border-radius:2px;background:#eee;cursor:pointer}
+.nep{text-align:center;margin-top:7px;border-bottom:1px solid #ddd;padding-bottom:1px}
+.nep a{color:#551a8b;text-decoration:underline;font-size:16px}
+.result{display:none;margin:18px 18px 30px;border:1px solid #aaa}
+.result h3{margin:0;padding:8px;text-align:center;background:#eee;font-family:Arial}
+.result table{width:100%;border-collapse:collapse}
+.result td{border:1px solid #bbb;padding:6px}
+.result td:first-child{font-weight:bold;width:35%}
+.admin{margin:35px 0 25px;border-top:1px solid #bbb;padding-top:15px;font-family:Arial,sans-serif}
+.admin h3{margin:0 0 10px}.admin-note{font-size:12px;color:#555}
+.admin input[type=password]{height:28px;padding:4px;width:160px}
+.admin input[type=file]{height:auto;border:0}
+.admin-panel{display:none;margin-top:12px;padding:12px;border:1px solid #bbb;background:#fafafa}
+.admin-row{margin:9px 0}.admin button{height:28px}
+.status{font-size:13px;margin-top:8px}
+@media(max-width:700px){
+.page{padding:0 12px}.seal{left:0}.heading{margin-left:98px}
+.university{font-size:21px}.subtitle{font-size:15px}
+.form-row{flex-wrap:wrap;margin-left:0}.course-label{margin-left:0;margin-top:12px}
+#course{width:min(350px,100%)}.button-row{margin-left:0}
+}
+</style>
+</head>
+<body>
+<main class="page">
+<header class="header">
+<img class="seal" src="university-seal.jpg" alt="University Seal">
+<div class="heading"><div class="university">Bundelkhand University, Jhansi</div>
+<div class="subtitle">Provisional Statement of Marks</div></div>
+</header>
+
+<section class="content">
+<p class="instruction">Enter your Roll No. and choose course to view your provisional marks</p>
+<form id="resultForm">
+<div class="form-row">
+<label class="roll-label">Roll No :</label><input id="roll" required>
+<label class="course-label">Course :</label>
+<select id="course" required><option value="">-Select-</option></select>
+</div>
+<div class="button-row"><button type="submit">View Result</button></div>
+</form>
+<div class="nep"><a href="#" onclick="return false">NEP Result GO</a></div>
+
+<div class="result" id="resultBox">
+<h3>Provisional Statement of Marks</h3>
+<div id="resultContent"></div>
+</div>
+
+<section class="admin">
+<h3>Admin — Excel Upload</h3>
+<div class="admin-note">Upload an Excel/CSV file containing your result records. The first row must contain column headings.</div>
+<div class="admin-row">
+<input type="password" id="adminPass" placeholder="Admin password">
+<button onclick="login()">Login</button>
+</div>
+<div class="admin-panel" id="adminPanel">
+<div class="admin-row"><input type="file" id="excelFile" accept=".xlsx,.xls,.csv"></div>
+<button onclick="uploadExcel()">Upload Excel</button>
+<button onclick="clearData()">Clear Uploaded Data</button>
+<div class="status" id="adminStatus"></div>
+</div>
+</section>
+</section>
+</main>
+
+<script>
+let records = JSON.parse(localStorage.getItem("bu_result_records") || "[]");
+
+function normalize(v){return String(v??"").trim().toLowerCase().replace(/\s+/g," ")}
+function refreshCourses(){
+ const s=document.getElementById("course"), old=s.value;
+ s.innerHTML='<option value="">-Select-</option>';
+ [...new Set(records.map(r=>String(r.Course??r.course??"").trim()).filter(Boolean))]
+ .sort().forEach(c=>{let o=document.createElement("option");o.value=c;o.textContent=c;s.appendChild(o)});
+ if([...s.options].some(o=>o.value===old))s.value=old;
+}
+refreshCourses();
+
+document.getElementById("resultForm").addEventListener("submit",e=>{
+ e.preventDefault();
+ const roll=normalize(document.getElementById("roll").value);
+ const course=normalize(document.getElementById("course").value);
+ const found=records.find(r=>normalize(r["Roll No"]??r["Roll No."]??r.Roll??r.roll??r["Roll Number"])===roll &&
+ (!course || normalize(r.Course??r.course)===course));
+ const box=document.getElementById("resultBox"), content=document.getElementById("resultContent");
+ box.style.display="block";
+ if(!found){content.innerHTML='<p style="padding:12px">No result found for this Roll No. and Course.</p>';return}
+ let rows=Object.entries(found).filter(([k,v])=>String(v??"").trim()!=="")
+ .map(([k,v])=>`<tr><td>${esc(k)}</td><td>${esc(v)}</td></tr>`).join("");
+ content.innerHTML=`<table>${rows}</table>`;
+});
+
+function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
+
+function login(){
+ if(document.getElementById("adminPass").value==="admin123"){
+  document.getElementById("adminPanel").style.display="block";
+  document.getElementById("adminStatus").textContent="Admin panel unlocked.";
+ }else alert("Wrong password.");
+}
+
+function uploadExcel(){
+ const f=document.getElementById("excelFile").files[0], st=document.getElementById("adminStatus");
+ if(!f){st.textContent="Please select an Excel or CSV file.";return}
+ const reader=new FileReader();
+ reader.onload=e=>{
+  try{
+   const wb=XLSX.read(e.target.result,{type:"array"});
+   const ws=wb.Sheets[wb.SheetNames[0]];
+   const data=XLSX.utils.sheet_to_json(ws,{defval:""});
+   if(!data.length){st.textContent="No rows found in the file.";return}
+   const headers=Object.keys(data[0]);
+   const hasRoll=headers.some(h=>["roll no","roll no.","roll","roll number"].includes(normalize(h)));
+   if(!hasRoll){st.textContent='Upload failed: Excel must contain a "Roll No" column.';return}
+   records=data;
+   localStorage.setItem("bu_result_records",JSON.stringify(records));
+   refreshCourses();
+   st.textContent=`Uploaded successfully: ${records.length} records loaded.`;
+  }catch(err){st.textContent="Could not read the file: "+err.message}
+ };
+ reader.readAsArrayBuffer(f);
+}
+function clearData(){
+ if(confirm("Clear all uploaded result data from this browser?")){
+  records=[];localStorage.removeItem("bu_result_records");refreshCourses();
+  document.getElementById("adminStatus").textContent="All local result data cleared.";
+ }
+}
+</script>
+</body>
+</html>
